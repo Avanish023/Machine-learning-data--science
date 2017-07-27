@@ -1,0 +1,38 @@
+#cleaning documents 
+
+
+Data1$Text<- str_replace_all(Data1$Text, "Some frequent occuring words", "replacementword")
+Data1$Text<- str_replace_all(Data1$Text, "Some frequent occuring words", "replacementword")
+
+
+# Using Tidy Text to remove punctuation, whitespace , stopwords
+docs1 <- docs1 %>%unnest_tokens(word, text)
+docs <- Corpus(VectorSource(Data1$Text))
+docs <- tm_map(docs, function(x) iconv(x, "latin1", "ASCII", sub=""))
+docs <- tm_map(docs, content_transformer(tolower))
+docs <- tm_map(docs, removeWords, stopwords("english"))
+docs <- tm_map(docs, removePunctuation)
+docs <- tm_map(docs, stripWhitespace)
+docs1 <- data.frame(text=sapply(docs, identity), 
+                        stringsAsFactors=F)
+                        
+ #   Joining with the groups                  
+docs1 <- cbind(Data1$Group,docs1)
+
+
+#docs <- DocumentTermMatrix(docs,control = list(weighting = function(x) weightTfIdf(x, normalize = FALSE)))
+
+
+docs <- tidy(docs)
+docs=docs %>%count(term, sort = TRUE)
+docs
+
+tf_idf <- docs1 %>%
+  bind_tf_idf(word,`Data1$Group`, n) %>%
+  arrange(desc(tf_idf))
+
+tf_idf<-as.data.frame(tf_idf)
+write.csv(tf_idf, "tfidf1.csv")
+
+
+
