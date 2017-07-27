@@ -1,0 +1,232 @@
+# Importing the dataset
+dataset = read.csv('train.csv')
+
+dataset = dataset[, 2:12]
+#dataset exploration
+
+
+dataset$Title <- gsub('(.*, )|(\\..*)', '', dataset$Name)
+
+table(dataset$Cabin,dataset$Survived)
+dataset$Cabin=as.character(dataset$Cabin)
+dataset$Cabin =ifelse(dataset$Cabin=='','N0',dataset$Cabin)
+dataset$Cabin <- substr(dataset$Cabin,1,1)
+
+dataset$CabinA = as.factor(ifelse(dataset$Cabin =='A',1,0))
+dataset$CabinB = as.factor(ifelse(dataset$Cabin =='B',1,0))
+dataset$CabinC = as.factor(ifelse(dataset$Cabin =='C',1,0))
+dataset$CabinD = as.factor(ifelse(dataset$Cabin =='D',1,0))
+dataset$CabinE = as.factor(ifelse(dataset$Cabin =='E',1,0))
+dataset$CabinF = as.factor(ifelse(dataset$Cabin =='F',1,0))
+dataset$CabinN = as.factor(ifelse(dataset$Cabin =='N',1,0))
+
+
+dataset$Mr = as.factor(ifelse(dataset$Title =='Mr',1,0))
+dataset$Mrs = as.factor(ifelse(dataset$Title =='Mrs',1,0))
+dataset$Master = as.factor(ifelse(dataset$Title =='Master',1,0))
+dataset$Miss = as.factor(ifelse(dataset$Title =='Miss',1,0))
+dataset$other = as.factor(ifelse(dataset$Title =='Miss' | dataset$Title =='Master'  |dataset$Title =='Mr' |dataset$Title =='Mrs',0,1))
+
+# handling missing value
+dataset$Age = ifelse(is.na(dataset$Age),
+                     ave(dataset$Age, FUN = function(x) mean(x, na.rm = TRUE)),
+                     dataset$Age)
+#creating bins for age
+summary(dataset$Age)
+dataset$Age1= as.factor(ifelse(dataset$Age >0 & dataset$Age < 18,1,0))
+dataset$Age2= as.factor(ifelse(dataset$Age >=18 & dataset$Age < 36,1,0))
+dataset$Age3= as.factor(ifelse(dataset$Age >=36 & dataset$Age < 54,1,0))
+dataset$Age4= as.factor(ifelse(dataset$Age >=54 & dataset$Age < 72,1,0))
+dataset$Age5= as.factor(ifelse(dataset$Age >=72 & dataset$Age < 100,1,0))
+
+#total family no:
+
+dataset$family = dataset$SibSp+dataset$Parch+1
+
+# fare
+dataset$Fare= ifelse(dataset$Fare >=150 ,34,dataset$Fare)
+summary(dataset$Fare3)
+dataset$Fare1= as.factor(ifelse(dataset$Fare >=0 & dataset$Fare < 30,1,0))
+dataset$Fare2= as.factor(ifelse(dataset$Fare >=30 & dataset$Fare < 60,1,0))
+dataset$Fare3= as.factor(ifelse(dataset$Fare >=60 & dataset$Fare < 90,1,0))
+dataset$Fare4= as.factor(ifelse(dataset$Fare >=90 & dataset$Fare < 120,1,0))
+dataset$Fare5= as.factor(ifelse(dataset$Fare >=120 ,1,0))
+summary(dataset$Fare)
+sd(dataset$Fare)
+
+#title
+table(dataset$Title)
+
+
+#female = 1,male =0
+dataset$Sex = as.factor(ifelse(dataset$Sex=='female',1,0))
+str(dataset)
+
+#embarked
+dataset$EmbarkedS = as.factor(ifelse(dataset$Embarked=='S',1,0))
+dataset$EmbarkedC = as.factor(ifelse(dataset$Embarked=='C',1,0))
+dataset$EmbarkedQ = as.factor(ifelse(dataset$Embarked=='Q',1,0))
+
+#plcass
+dataset$Pclass1 = as.factor(ifelse(dataset$Pclass==1,1,0))
+dataset$Pclass2 = as.factor(ifelse(dataset$Pclass==2,1,0))
+dataset$Pclass3 = as.factor(ifelse(dataset$Pclass==3,1,0))
+
+
+dataset$Ticket=as.character(dataset$Ticket)
+dataset$Ticket <- substr(dataset$Ticket,1,2)
+table(dataset$Ticket)
+dataset$Ticket1= as.factor(ifelse(substr(dataset$Ticket,1,1)=='1',1,0))
+dataset$Ticket2= as.factor(ifelse(substr(dataset$Ticket,1,1)=='2',1,0))
+dataset$Ticket3= as.factor(ifelse(substr(dataset$Ticket,1,1)=='3',1,0))
+dataset$Ticket4= as.factor(ifelse(substr(dataset$Ticket,1,1)=='4',1,0))
+#dataset$Ticket5= as.factor(ifelse(substr(dataset$Ticket,1,1)=='5',1,0))
+dataset$Ticket6= as.factor(ifelse(substr(dataset$Ticket,1,1)=='6',1,0))
+dataset$Ticket7= as.factor(ifelse(substr(dataset$Ticket,1,1)=='7',1,0))
+dataset$TicketA= as.factor(ifelse(substr(dataset$Ticket,1,1)=='A',1,0))
+dataset$TicketC= as.factor(ifelse(substr(dataset$Ticket,1,1)=='C',1,0))
+dataset$TicketF= as.factor(ifelse(substr(dataset$Ticket,1,1)=='F',1,0))
+dataset$TicketP= as.factor(ifelse(substr(dataset$Ticket,1,1)=='P',1,0))
+dataset$TicketS= as.factor(ifelse(substr(dataset$Ticket,1,1)=='S',1,0))
+dataset$TicketW= as.factor(ifelse(substr(dataset$Ticket,1,1)=='W',1,0))
+
+
+
+dataset$Survived = factor(dataset$Survived, levels = c(0, 1))
+#subsetting data set
+dataset1 = dataset[,-(2:3)]
+dataset1 = dataset1[,-(3:10)]
+#dataset1 = dataset1[,-7]
+# Splitting the dataset into the Training set and Test set
+#install.packages('caTools')
+library(caTools)
+set.seed(123)
+split = sample.split(dataset1$Survived, SplitRatio = .75)
+training_set = subset(dataset1, split == TRUE)
+test_set = subset(dataset1, split == FALSE)
+str(dataset1)
+
+### classifier
+#install.packages('randomForest')
+library(randomForest)
+set.seed(123)
+classifier = randomForest(x = training_set[-1],
+                          y = training_set$Survived,
+                          ntree = 500)
+summary(classifier)
+
+classifier1= glm(Survived ~. ,family = binomial(), data = training_set)
+summary(classifier1)
+
+# Predicting the Test set results
+y_pred = predict(classifier, newdata = test_set[-1])
+
+# Making the Confusion Matrix
+cm = table(test_set[, 1], y_pred)
+cm
+
+# Importing the testdataset
+dataset2 = read.csv('test.csv')
+dataset2= dataset2[ ,2:11]
+dataset2$Age = ifelse(is.na(dataset2$Age),
+                      ave(dataset2$Age, FUN = function(x) mean(x, na.rm = TRUE)),
+                      dataset2$Age)
+dataset2$Fare = ifelse(is.na(dataset2$Fare),
+                       ave(dataset2$Fare, FUN = function(x) mean(x, na.rm = TRUE)),
+                       dataset2$Fare)
+
+dataset$Title <- gsub('(.*, )|(\\..*)', '', dataset$Name)
+
+
+#dataset$CabinYes = as.factor(ifelse(dataset$Cabin != '',1,0))
+dataset2$Cabin=as.character(dataset2$Cabin)
+dataset2$Cabin =ifelse(dataset2$Cabin=='','N0',dataset2$Cabin)
+dataset2$Cabin <- substr(dataset2$Cabin,1,1)
+
+dataset2$CabinA = as.factor(ifelse(dataset2$Cabin =='A',1,0))
+dataset2$CabinB = as.factor(ifelse(dataset2$Cabin =='B',1,0))
+dataset2$CabinC = as.factor(ifelse(dataset2$Cabin =='C',1,0))
+dataset2$CabinD = as.factor(ifelse(dataset2$Cabin =='D',1,0))
+dataset2$CabinE = as.factor(ifelse(dataset2$Cabin =='E',1,0))
+dataset2$CabinF = as.factor(ifelse(dataset2$Cabin =='F',1,0))
+dataset2$CabinN = as.factor(ifelse(dataset2$Cabin =='N',1,0))
+
+
+dataset2$Title <- gsub('(.*, )|(\\..*)', '', dataset2$Name)
+
+dataset2$Mr = as.factor(ifelse(dataset2$Title =='Mr',1,0))
+dataset2$Mrs = as.factor(ifelse(dataset2$Title =='Mrs',1,0))
+dataset2$Master = as.factor(ifelse(dataset2$Title =='Master',1,0))
+dataset2$Miss = as.factor(ifelse(dataset2$Title =='Miss',1,0))
+dataset2$other = as.factor(ifelse(dataset2$Title =='Miss' | dataset2$Title =='Master'  |dataset2$Title =='Mr' |dataset2$Title =='Mrs',0,1))
+
+
+
+
+#creating bins for age
+summary(dataset2)
+dataset2$Age1= as.factor(ifelse(dataset2$Age >0 & dataset2$Age < 18,1,0))
+dataset2$Age2= as.factor(ifelse(dataset2$Age >=18 & dataset2$Age < 36,1,0))
+dataset2$Age3= as.factor(ifelse(dataset2$Age >=36 & dataset2$Age < 54,1,0))
+dataset2$Age4= as.factor(ifelse(dataset2$Age >=54 & dataset2$Age < 72,1,0))
+dataset2$Age5= as.factor(ifelse(dataset2$Age >=72 & dataset2$Age < 100,1,0))
+
+dataset2$family = dataset2$SibSp+dataset2$Parch+1
+
+# fare
+summary(dataset2$Fare3)
+dataset2$Fare1= as.factor(ifelse(dataset2$Fare >=0 & dataset2$Fare < 30,1,0))
+dataset2$Fare2= as.factor(ifelse(dataset2$Fare >=30 & dataset2$Fare < 60,1,0))
+dataset2$Fare3= as.factor(ifelse(dataset2$Fare >=60 & dataset2$Fare < 90,1,0))
+dataset2$Fare4= as.factor(ifelse(dataset2$Fare >=90 & dataset2$Fare < 120,1,0))
+dataset2$Fare5= as.factor(ifelse(dataset2$Fare >=120 ,1,0))
+dataset2$Fare4
+
+
+
+
+dataset2$Sex = as.factor(ifelse(dataset2$Sex=='female',1,0))
+str(dataset)
+
+#embarked
+dataset2$EmbarkedS = as.factor(ifelse(dataset2$Embarked=='S',1,0))
+dataset2$EmbarkedC = as.factor(ifelse(dataset2$Embarked=='C',1,0))
+dataset2$EmbarkedQ = as.factor(ifelse(dataset2$Embarked=='Q',1,0))
+
+#plcass
+dataset2$Pclass1 = as.factor(ifelse(dataset2$Pclass==1,1,0))
+dataset2$Pclass2 = as.factor(ifelse(dataset2$Pclass==2,1,0))
+dataset2$Pclass3 = as.factor(ifelse(dataset2$Pclass==3,1,0))
+
+dataset2$Ticket=as.character(dataset2$Ticket)
+dataset2$Ticket <- substr(dataset2$Ticket,1,2)
+table(dataset2$Ticket)
+dataset2$Ticket1= as.factor(ifelse(substr(dataset2$Ticket,1,1)=='1',1,0))
+dataset2$Ticket2= as.factor(ifelse(substr(dataset2$Ticket,1,1)=='2',1,0))
+dataset2$Ticket3= as.factor(ifelse(substr(dataset2$Ticket,1,1)=='3',1,0))
+dataset2$Ticket4= as.factor(ifelse(substr(dataset2$Ticket,1,1)=='4',1,0))
+#dataset2$Ticket5= as.factor(ifelse(substr(dataset2$Ticket,1,1)=='5',1,0))
+dataset2$Ticket6= as.factor(ifelse(substr(dataset2$Ticket,1,1)=='6',1,0))
+dataset2$Ticket7= as.factor(ifelse(substr(dataset2$Ticket,1,1)=='7',1,0))
+dataset2$TicketA= as.factor(ifelse(substr(dataset2$Ticket,1,1)=='A',1,0))
+dataset2$TicketC= as.factor(ifelse(substr(dataset2$Ticket,1,1)=='C',1,0))
+dataset2$TicketF= as.factor(ifelse(substr(dataset2$Ticket,1,1)=='F',1,0))
+dataset2$TicketP= as.factor(ifelse(substr(dataset2$Ticket,1,1)=='P',1,0))
+dataset2$TicketS= as.factor(ifelse(substr(dataset2$Ticket,1,1)=='S',1,0))
+dataset2$TicketW= as.factor(ifelse(substr(dataset2$Ticket,1,1)=='W',1,0))
+
+
+dataset3 = dataset2[,-(1:2)]
+dataset3 = dataset3[,-(2:8)]
+dataset5 =cbind(Survived=1,dataset3)
+dataset5$Survived= as.factor(dataset5$Survived)
+dataset5 = dataset5[,-10]
+
+str(dataset5)
+str(dataset1)
+y_pred = predict(classifier, newdata = dataset5[-1])
+#dataset8 = read.csv('gendermodel.csv')
+dataseta = read.csv('test.csv')
+dataset9=data.frame(PassengerId=dataseta$PassengerId,Survived=y_pred)
+write.csv(dataset9,file='avanish3.csv',row.names = FALSE)
+y=read.csv('avanish3.csv')
