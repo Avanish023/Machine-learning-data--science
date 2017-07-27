@@ -1,0 +1,24 @@
+# instaliing library
+#install.packages('XML')
+library(XML)
+#install.packages("plyr")
+library(plyr)
+install.packages("xlsx")
+library(xlsx)
+
+# Checking for one file
+DOC1 <- xmlRoot(xmlTreeParse('Filename', useInternalNodes = TRUE,ignoreBlanks=TRUE,getDTD=TRUE))
+data <- data.frame(Column1=xpathSApply(DOC1,"//XMLTAG1",xmlValue),Column2=xpathSApply(DOC1,"//XMLTAG1",xmlValue),stringsAsFactors = FALSE)
+
+
+# Trying for multiple file 
+files <- list.files() 
+parse_xml <-function(FileName) {
+  doc <- xmlRoot(xmlTreeParse(FileName, useInternalNodes = TRUE,getDTD=TRUE))
+  data <- data.frame(Column1=xpathSApply(doc,"//JudgmentText",xmlValue),Column2=xpathSApply(doc,"//Laws//Law[1]",xmlValue),stringsAsFactors = FALSE)
+} 
+Data <- ldply(files,parse_xml,.inform = TRUE)
+Data= cbind(files,Data)
+
+write.csv(Data,"Allxmlsentence.csv")       
+       
