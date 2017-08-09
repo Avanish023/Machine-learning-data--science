@@ -1,0 +1,170 @@
+# instaliing library
+#install.packages('XML')
+library(XML)
+#install.packages("plyr")
+library(plyr)
+install.packages("tm")
+library(tm)
+
+
+#loading multiple xml file
+files <- list.files() 
+parse_xml <-function(FileName) {
+DOC1 <- xmlRoot(xmlTreeParse(FileName, useInternalNodes = TRUE,ignoreBlanks=TRUE,getDTD=TRUE))
+if (xpathSApply(DOC1, "boolean(.//KeyWord[1])")) {
+  keyword1= xpathSApply(DOC1, ".//KeyWord[1]", xmlValue)
+} else {
+  keyword1 = 0
+}
+if (xpathSApply(DOC1, "boolean(.//KeyWord[2])")) {
+  keyword2= xpathSApply(DOC1, ".//KeyWord[2]", xmlValue)
+} else {
+  keyword2 = 0
+}
+if (xpathSApply(DOC1, "boolean(.//KeyWord[3])")) {
+  keyword3= xpathSApply(DOC1, ".//KeyWord[3]", xmlValue)
+} else {
+  keyword3 = 0
+}
+if (xpathSApply(DOC1, "boolean(.//KeyWord[4])")) {
+  keyword4= xpathSApply(DOC1, ".//KeyWord[4]", xmlValue)
+} else {
+  keyword4 = 0
+}
+if (xpathSApply(DOC1, "boolean(.//KeyWord[5])")) {
+  keyword5= xpathSApply(DOC1, ".//KeyWord[5]", xmlValue)
+} else {
+  keyword5 = 0
+}
+
+if (xpathSApply(DOC1, "boolean(.//KeyWord[6])")) {
+  keyword6= xpathSApply(DOC1, ".//KeyWord[6]", xmlValue)
+} else {
+  keyword6 = 0
+}
+
+
+if (xpathSApply(DOC1, "boolean(.//KeyWord[7])")) {
+  keyword7= xpathSApply(DOC1, ".//KeyWord[7]", xmlValue)
+} else {
+  keyword7 = 0
+}
+
+
+
+if (xpathSApply(DOC1, "boolean(.//KeyWord[8])")) {
+  keyword8= xpathSApply(DOC1, ".//KeyWord[8]", xmlValue)
+} else {
+  keyword8 = 0
+}
+
+
+if (xpathSApply(DOC1, "boolean(.//KeyWord[9])")) {
+  keyword9= xpathSApply(DOC1, ".//KeyWord[9]", xmlValue)
+} else {
+  keyword9 = 0
+}
+
+
+
+var1= xpathSApply(DOC1,"//Documentid",xmlValue)
+var2= xpathSApply(DOC1,"//jobs",xmlValue)
+data <- data.frame(caseid=Documentid,keyword1=keyword1,keyword2=keyword2,keyword3=keyword3,keyword4=keyword4,keyword5=keyword5,keyword6=keyword6,keyword7=keyword7,keyword8=keyword8,keyword9=keyword9,jobs=var2,stringsAsFactors = FALSE)
+} 
+Data <- ldply(files,parse_xml,.inform = TRUE)
+
+caseid=Data$jobs
+Data <- Data[-1]
+
+
+#cleaning by creating corpus
+docs <- Corpus(DataframeSource(Data))
+docs <- tm_map(docs, content_transformer(tolower))
+docs <- tm_map(docs, stemDocument, language = "english") 
+docs <- tm_map(docs, removeNumbers)
+docs <- tm_map(docs, removeWords, stopwords("english"))
+docs <- tm_map(docs, removePunctuation)
+docs <- tm_map(docs, stripWhitespace)
+
+
+#creating document term matrix
+dtm <- DocumentTermMatrix(docs)
+dtm= removeSparseTerms(dtm, 0.995)
+
+#main data
+Dtmdataframe1 = as.data.frame(as.matrix(dtm), stringsAsFactors=False)
+
+#converting dataframe into binary
+
+Dtmdataframe1=ifelse(Dtmdataframe1>0, 1, 0)
+
+#columnbinding with caseid
+#Dtmdataframe1 = cbind(caseid,Dtmdataframe1)
+#writing csv
+#write.csv(Dtmdataframe1,file="Output1.csv")
+#transposing the dataframe
+#Dtmdataframe1=t(Dtmdataframe1)
+
+
+Df= Dtmdataframe1
+#correlationmatrix
+nrow= nrow(Df)
+relationmatrix =mat.or.vec(nrow,nrow)
+for (i in 1:nrow){
+  for(k in 1:nrow){
+   sum=0
+   sum = sum(Df[i,]*Df[k,])
+   if (i==k){
+    relationmatrix[i,k]=0
+   }
+   else{
+     relationmatrix[i,k]=sum  
+   }
+   sum=0
+  }
+}
+
+
+
+
+
+#position matrix for 3 recoomendations
+positionmatrix =mat.or.vec(nrow,3)
+for (i in 1:nrow){
+    dummy=which(relationmatrix[i,] == max(relationmatrix[i,]) )
+    for (j in 1:3){
+      positionmatrix[i,j]=dummy[j]
+      
+    }
+}
+  
+#Recommended namematrix
+recommendmatrix =mat.or.vec(nrow,3)
+for (i in 1:nrow){
+  for (j in 1:3){
+   dummy1=positionmatrix[i,j]
+   recommendmatrix[i,j]=caseid[dummy1]
+  }
+}  
+
+
+#Final Recommend Matrix
+finalrecommendmatrix=cbind(caseid,recommendmatrix)
+
+
+
+      
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
