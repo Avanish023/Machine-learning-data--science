@@ -1,0 +1,107 @@
+
+#installing library
+library(xlsx)
+#install.packages("tseries")
+library(tseries)
+#install.packages("vars")
+library(vars)
+#install.packages("forecast")
+library(forecast)
+
+
+
+#reading data & basic cleanup
+
+dataset=read.xlsx('PS to work.xls', 1, header=FALSE, colClasses=NA)
+dataset=t(dataset)
+dataset=dataset[-1,]
+dataset1=as.matrix(dataset[,2:3])
+colnames(dataset)=c('Dates','X','Y')
+Dummy=as.data.frame(x=(seq(as.Date("2015/1/1"),as.Date("2017/2/1") ,by = "month")))
+colnames(Dummy)=c('x')
+dataset=cbind(Dummy,dataset)
+dataset=dataset[,-2]
+colnames(dataset)=c('Dates','X','Y')
+
+#converting dataframe into time series 
+Dummy2=as.matrix(dataset[,-1])
+dataset=ts(Dummy2,start=c(2015,1),end=c(2017,2),frequency=12,)
+
+#approach 1 univariate analysis
+
+
+#basic plots 
+plot(dataset)
+plot(dataset[,1])
+abline(reg=lm(dataset[,1]~time(dataset[,1])))
+plot(dataset[,2])
+abline(reg=lm(dataset[,2]~time(dataset[,2])))
+
+#agumented dick fuller test 
+x=as.numeric(dataset[,1])
+adf.test(x, alternative="stationary", k=0)
+
+#agumented dick fuller test 
+y=as.numeric(dataset[,2])
+adf.test(y, alternative="stationary", k=0)
+
+#acf and pacf function for x 
+acf(x)
+pacf(x)
+
+#acf and pacf function for x 
+acf(diff(y))
+pacf(diff(y))
+
+#fitting arima model in for product1(x) 
+fitx <- arima(x, c(0, 0, 2))
+fitx$aic
+tsdiag(fitx)
+predx <- predict(fitx, n.ahead = 5)
+  
+#fitting arima model in for product1(y) 
+fity <- arima(y, c(0, 1, 1))
+fity$aic
+tsdiag(fity)
+predy <- predict(fity, n.ahead = 5)
+
+
+###trying 2 approach with thought sale of product 1 might be related to second product  using var model  
+
+
+ndiffs(x, alpha = 0.05, test = c("adf"))#0
+ndiffs(y, alpha = 0.05, test = c("adf"))#1
+
+#Difference to achieve stationarity
+d.x1 = diff(x, differences = 1)
+d.x2 = diff(y, differences = 1)
+
+#binding and plotting 
+dx = cbind(d.x1, d.x2)
+plot.ts(dx)
+
+#Lag optimisation
+VARselect(dx, lag.max = 5, type = "both")#5
+
+#Vector autoregression with lags set according to results of lag optimisation. 
+var = VAR(dx, p=5)
+
+#Test for serial autocorrelation using the Portmanteau test
+serial.test(var, lags.pt = 5, type = "PT.asymptotic")
+
+summary(var)
+
+
+#predicting output and plotting graphs
+prd <- predict(var, n.ahead = 5, ci = 0.95, dumvar = NULL)
+print(prd)
+plot(prd, "single")
+
+a=prd$fcst$d.x1
+b=prd$fcst$d.x2
+
+a1=a[,1]
+diffinv(a1,differences = 1,xi= 3080)
+
+b1=b[,1]
+diffinv(b1,differences = 1,xi= 2022)
