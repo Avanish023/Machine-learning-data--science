@@ -1,0 +1,90 @@
+#install.packages("reshape")
+library(reshape)
+#install.packages("reshape2")
+library(reshape2)
+
+
+#1reading data
+dataset = read.csv('class_scores.csv')
+head(dataset)
+str(dataset)
+answer1=dataset
+#2
+avgpersubject=aggregate(dataset$score, by=list(Category=dataset$subject), FUN=mean)
+answer2=avgpersubject
+#3
+avgpersubjectandclass=aggregate(dataset$score, by=list(dataset$subject,dataset$class), FUN=mean)
+answer3=avgpersubjectandclass
+#4
+dataset1 = read.csv('class_scores_1.csv')
+colnames(dataset)<-colnames(dataset1)
+data=rbind(dataset,dataset1)
+answer4=data
+#5
+sum=aggregate(data$marks, by=list(Category=data$student_id), FUN=sum)
+answer5=sum
+#6
+gender=read.csv('student_gender.csv')
+genderdata= merge(data,gender,by.x = "student_id", by.y = "student_number",all.x=TRUE)
+answer6=genderdata
+#7
+newdata <- subset(genderdata, class==2)
+newdata1 <- subset(newdata, gender=='F')
+newdata2 <- subset(newdata1, subject_name=='maths')
+answer7 <- subset(newdata2, marks<70)
+
+#8
+answer8=data.frame(class=genderdata$class,subject=genderdata$subject_name)
+answer8=unique(answer8[,c('class','subject')])
+
+#9
+answer9 <- subset(genderdata, subject_name=='maths' & marks >= 80)
+
+#10
+newdata8<- subset(data,class==2)
+answer10=dcast(data = newdata8,formula = student_id~subject_name)
+answer10= subset(answer10,english>69 & maths<70)
+
+#11 
+rank=genderdata
+rank <- subset(rank, class==2)
+
+maxN <- function(x, N=4){
+  len <- length(x)
+  if(N>len){
+    warning('N greater than length(x).  Setting N=length(x)')
+    N <- length(x)
+  }
+  sort(x,partial=len-N+1)[len-N+1]
+}
+
+answer11=maxN(rank$marks)
+
+
+#13
+newdata5=genderdata
+newdata5$failorpass=ifelse(newdata5$marks>69,1,0)
+z=aggregate(newdata5$failorpass, by=list(Category=newdata5$subject_name), FUN=sum)
+a=table(newdata5$subject_name)
+a=as.data.frame(a)
+answer13=merge(z,a,by.x = "Category", by.y = "Var1")
+answer13$passpercentage= (answer13$x/answer13$Freq)*100
+
+#14
+p=aggregate(newdata5$failorpass, by=list(newdata5$subject,newdata5$gender), FUN=sum)
+q=table(newdata5$subject_name,newdata5$gender)
+q=as.data.frame(q)
+answer14=merge(p,q, by.x = c("Group.1","Group.2"), by.y = c("Var1","Var2"))
+answer14$passpercentage= (answer14$x/answer14$Freq)*100
+#85 is the highest mark scored
+
+#15
+answer15<- subset(genderdata, marks<70)
+write.csv(answer15,file = "FailData.csv")
+
+
+#removing unwanted elements 
+list = c(paste("answer",c(1:15),sep=""))
+z=ls()
+final=setdiff(z,list)
+rm(list=final)
