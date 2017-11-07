@@ -1,0 +1,187 @@
+
+#reading train file
+f = open("enron_train.txt","r", encoding='latin1')
+content2 = f.readlines()
+Y1 = list()
+X1 = list()
+for i in content2:
+    i=i.split("	")
+    Y1.append(i[0])
+    X1.append(i[1])   
+
+# importing library
+import pandas as pd 
+import numpy as np
+import re 
+import nltk
+nltk.download('stopwords')
+from nltk.corpus import stopwords 
+from nltk.stem.porter import PorterStemmer
+df = pd.DataFrame({'text':X1})
+df1 = pd.DataFrame({'output':Y1})
+d = {'Yes': 1, 'No': 0}
+df1['output']=df1['output'].map(d)
+
+#cleaning the dataset 
+corpus = []
+for i in range(0,3657):
+     text=re.sub('[^a-zA-Z]',' ',df['text'][i])
+     text=text.lower()
+     text=text.split()
+     ps=PorterStemmer()
+     text = [ps.stem(word) for word in text if not word in stopwords.words('english')]
+     text=  ' '.join(text) 
+     corpus.append(text)
+     
+     
+#creating bag of words model     
+from sklearn.feature_extraction.text import CountVectorizer
+cv= CountVectorizer(max_features=2100)        
+X=cv.fit_transform(corpus).toarray()
+Y= df1.iloc[:,0].values
+
+#creating bag of words model-tfidf
+from sklearn.feature_extraction.text import TfidfVectorizer
+tf =  TfidfVectorizer(tokenizer=lambda doc: doc, lowercase=False,max_features=27)
+Xtfidf= tf.fit_transform(corpus).toarray()
+
+#reading test file
+f = open("enron_test.txt","r", encoding='latin1')
+content3 = f.readlines()
+Ytest = list()
+Xtest = list()
+for i in content3:
+     i=i.split("	")
+     Ytest.append(i[0])
+     Xtest.append(i[1])   
+
+dftest = pd.DataFrame({'text':Xtest})
+dftest1 = pd.DataFrame({'output':Ytest})
+dftest1['output']=dftest1['output'].map(d)
+Ytest= dftest1.iloc[:,0].values
+#cleaning the dataset 
+corpus2 = []
+for i in range(0,992):
+     text1=re.sub('[^a-zA-Z]',' ',dftest['text'][i])
+     text1=text1.lower()
+     text1=text1.split()
+     ps=PorterStemmer()
+     text1 = [ps.stem(word) for word in text1 if not word in stopwords.words('english')]
+     text1=  ' '.join(text1) 
+     corpus2.append(text1)
+cvtest= CountVectorizer(max_features=2100)        
+Xtest=cv.fit_transform(corpus2).toarray()
+Xtfidftest= tf.fit_transform(corpus2).toarray()
+
+#naive bayes 
+from sklearn.naive_bayes import GaussianNB
+classifier = GaussianNB()
+classifier.fit(X,Y)
+#ypred        
+Ypred=classifier.predict(Xtest)
+from sklearn.metrics import confusion_matrix
+cm = confusion_matrix(Ytest,Ypred)
+#accuracy got 57.4
+
+
+# random forrest
+from sklearn.ensemble import RandomForestClassifier
+clf = RandomForestClassifier(n_estimators=1000)
+clf = clf.fit(X, Y)
+YpredRF=clf.predict(Xtest)
+cmRF = confusion_matrix(Ytest,YpredRF)
+# accuracy got 66.3
+
+#SVM
+from sklearn import svm
+csvm = svm.SVC(kernel='linear')
+csvm.fit(X, Y)
+YpredSVM=csvm.predict(Xtest)
+cmSVM = confusion_matrix(Ytest,YpredSVM)
+#accuracy got 67.5
+
+
+#neural network 
+#importing keras
+import keras
+from keras.models import Sequential
+from keras.layers import Dense
+
+#intialising the ANN
+classifier = Sequential()
+#First hidden layer
+classifier.add(Dense(500,input_shape=(1000,),activation='relu',kernel_initializer='uniform'))
+#second hidden layer
+classifier.add(Dense(250,activation='relu',kernel_initializer='uniform'))
+#second hidden layer
+classifier.add(Dense(125,activation='sigmoid',kernel_initializer='uniform'))
+#output layer
+classifier.add(Dense(1,activation='sigmoid',kernel_initializer='uniform'))
+#Compiling ann
+classifier.compile(optimizer='adam',loss='binary_crossentropy',metrics=['accuracy'])
+#fitting ann to training set 
+classifier.fit(X,Y,batch_size= 10,epochs=50)
+classifier.fit(Xtfidf,Y,batch_size= 5,epochs=50)
+
+
+
+Ypredann=classifier.predict(Xtest)
+Ypredann=(Ypredann > .5)
+Ypredanntfidf = (Ypredanntfidf > .5)
+cmANN = confusion_matrix(Ytest,Ypredann)
+cmANNtfidf = confusion_matrix(Ytest,Ypredanntfidf)
+Ypredanntfidf=classifier.predict(Xtfidftest)
+
+#accuracy got 65.4
+
+
+#heighest accuracy we got is 64.2%
+# lets  try to improve this 
+
+#lets join traina and test data and then lets take tof 1000 word for tf-idf
+corpuscombined1=corpus+corpus2
+from sklearn.feature_extraction.text import CountVectorizer
+cv= CountVectorizer()        
+Xcombined=cv.fit_transform(corpuscombined1).toarray()
+tf1 =  TfidfVectorizer(max_features=1000)
+Xcomtfidf= tf1.fit_transform(corpuscombined1).toarray()
+
+Xtrain= Xcomtfidf[0:3657,:]
+Xtest=  Xcomtfidf[3657:4649,:]
+# running ann
+classifier.fit(Xtrain,Y,batch_size= 10,epochs=50)
+Ypredann1=classifier.predict(Xtest)
+Ypredann1=(Ypredann1 > .5)
+cmAnn1 = confusion_matrix(Ytest,Ypredann1)
+#accuracy got 68.3
+
+# running random forrest 
+clf = clf.fit(Xtrain, Y)
+YpredRF1=clf.predict(Xtest)
+cmRF1 = confusion_matrix(Ytest,YpredRF1)
+#accuracy got 70.6
+#lets try n grams 
+vectorizer = TfidfVectorizer(ngram_range=(1,3),max_features =3000)
+Xbgramfidf= vectorizer.fit_transform(corpuscombined1).toarray()
+
+Xtrain1= Xcomtfidf[0:3657,:]
+Xtest1=  Xcomtfidf[3657:4649,:]
+clf = clf.fit(Xtrain1, Y)
+YpredRF2=clf.predict(Xtest1)
+cmRF2 = confusion_matrix(Ytest,YpredRF2)
+#accuracy got 72.2
+
+#feature vector 
+featurename=vectorizer.get_feature_names()
+
+
+
+
+
+
+
+
+
+
+
+
